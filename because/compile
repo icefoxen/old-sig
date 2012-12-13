@@ -1,0 +1,14 @@
+#!/bin/sh
+
+ASM='nasm -f elf'
+CC='gcc -c -Wall'
+LINK='gcc'
+
+echo Cleaning old files...
+./clean
+
+echo Compiling core...
+core/compile
+
+echo Linking...
+$LINK *.o

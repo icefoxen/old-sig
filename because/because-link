@@ -1,0 +1,9 @@
+#!/bin/sh
+
+echo Compiling core...
+cd core
+compile
+cd ..
+
+echo Linking...
+gcc *.o core/*.o

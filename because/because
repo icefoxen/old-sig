@@ -1,0 +1,95 @@
+#!/usr/bin/python
+# because-interface.py
+# The interface for Because.
+# File handling, command line args, all that junk.
+#
+# Simon Heath
+# 30/5/2003
+
+from because_core import *
+import sys
+import os
+
+assembleflag = 0
+linkflag     = 0
+
+def files_to_read():
+   final = []
+   for x in sys.argv[1:]:
+      if x[0] != '-':
+         final.append( x )
+   return final
+
+def compile_file( fname ):
+   filename = fname
+   if fname[-4:] != '.sig':
+      print fname
+      print fname[-4:]
+      error( "All files must have .sig extension!" )
+   f = open( fname, 'r' )
+   text = f.read()
+   f.close()
+   # Declare extern and globals
+   # Should be replaced with real namespacing soon...
+   text = compiletext( text )
+   text = 'extern _pushstack, _popstack, _initstack\n' + text
+
+   newfname = fname[:-4] + '.asm'
+   f = open( newfname, 'w' )
+   f.write( text )
+   f.close()
+   
+
+# Builds the file header with all the extern/global, data segment, all that
+# jazz.
+def buildheader():
+   for x in bfuncs:
+      fileheader = 'extern ' + x + '\n' + fileheader
+   for x in ufuncs:
+      fileheader = 'global ' + x + '\n' + fileheader
+   # Build data segment
+   fileheader += 'segment .data\n'
+   for x in decls:
+      if x[0] == '%%var':
+         # If a var is declared, build the name and init it.
+	 # All vars are 32 bits.  If you need something bigger, use a pointer.
+         fileheader += x[1][0] + ' dd ' + x[1][1]
+
+
+def cmdline_args():
+   global assembleflag, linkflag
+   for x in sys.argv[1:]:
+      if x[0] == '-':
+         if x == '-a':
+	    assembleflag = 1
+	 elif x == '-l':
+	    assembleflag = 1       # We cannot link w/o assembling first!
+	    linkflag = 1
+	 elif x == '-h':
+	    usage()
+	 else:
+	    raise "Unknown argument: " + x
+	    
+
+def usage():
+   print """
+Because: a Sig compiler.
+Usage:
+   because [-a] [-l] [-h] file.sig
+   -a = assemble to ELF .o format
+   -l = assemble and run ./because-link
+"""
+
+	    
+def main():
+   global assembleflag, linkflag
+   cmdline_args()
+   for x in files_to_read():
+      compile_file( x )
+      if assembleflag:
+         os.system( "nasm -f elf " + (x[:-4] + '.asm') )
+   if linkflag:
+      os.system( "./because-link" )
+
+if __name__ == '__main__':
+   main()
